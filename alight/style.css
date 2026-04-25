@@ -1,11 +1,10 @@
 /* ============================================
-   Alight - 官网样式（暗黑主题）
-   匹配真实 App 暗色 UI，基于 App 的 theme.css 暗色变量
+   LiteApps - 官网样式（支持亮/暗双主题）
    ============================================ */
 
-/* CSS Variables - 匹配真实 App 暗色主题 */
+/* CSS Variables - 默认暗色主题 */
 :root {
-  /* 品牌主色 - 与真实 App 暗色主题一致 */
+  /* 品牌主色 */
   --primary: #60a5fa;
   --primary-light: #93bbfd;
   --primary-dark: #3b82f6;
@@ -37,7 +36,7 @@
   --border-color: #2d3748;
   --border-light: #1e293b;
 
-  /* 统计卡片颜色 - 与真实 App 暗色 theme.css 完全一致 */
+  /* 统计卡片颜色 */
   --stat-cache-bg: rgba(234, 88, 12, 0.15);
   --stat-cache-color: #fb923c;
   --stat-health-bg: rgba(59, 130, 246, 0.15);
@@ -47,7 +46,7 @@
   --stat-space-bg: rgba(34, 197, 94, 0.15);
   --stat-space-color: #4ade80;
 
-  /* 阴影 - 暗色下更重 */
+  /* 阴影 */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -57,6 +56,59 @@
   --radius-lg: 16px;
   --radius-xl: 24px;
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* 过渡动画 */
+  --theme-transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* 亮色主题变量 */
+:root[data-theme="light"] {
+  /* 品牌主色 - 亮色模式下稍微调深以保持可读性 */
+  --primary: #3b82f6;
+  --primary-light: #60a5fa;
+  --primary-dark: #2563eb;
+  --primary-bg: rgba(59, 130, 246, 0.1);
+  --primary-gradient: linear-gradient(135deg, #2563eb 0%, #0891b2 100%);
+
+  /* 功能色 - 亮色模式 */
+  --success: #16a34a;
+  --success-bg: rgba(34, 197, 94, 0.1);
+  --warning: #d97706;
+  --warning-bg: rgba(245, 158, 11, 0.1);
+  --danger: #dc2626;
+  --danger-bg: rgba(239, 68, 68, 0.1);
+
+  /* 背景色 - 亮色主题 */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-surface: #f1f5f9;
+  --bg-surface-hover: #e2e8f0;
+
+  /* 文字色 - 亮色主题 */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #64748b;
+  --text-hint: #94a3b8;
+
+  /* 边框色 - 亮色主题 */
+  --border-color: #e2e8f0;
+  --border-light: #f1f5f9;
+
+  /* 统计卡片颜色 - 亮色模式 */
+  --stat-cache-bg: rgba(234, 88, 12, 0.1);
+  --stat-cache-color: #ea580c;
+  --stat-health-bg: rgba(59, 130, 246, 0.1);
+  --stat-health-color: #2563eb;
+  --stat-count-bg: rgba(147, 51, 234, 0.1);
+  --stat-count-color: #9333ea;
+  --stat-space-bg: rgba(34, 197, 94, 0.1);
+  --stat-space-color: #16a34a;
+
+  /* 阴影 - 亮色模式 */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
 /* Reset */
@@ -78,6 +130,7 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   overflow-x: hidden;
+  transition: var(--theme-transition);
 }
 
 a {
@@ -201,6 +254,70 @@ img {
   color: var(--primary);
   border-color: var(--primary);
   transform: translateY(-1px);
+}
+
+/* 主题切换按钮 */
+.theme-switch {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-switch:hover {
+  background: var(--bg-surface-hover);
+  color: var(--primary);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.theme-switch svg {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* 太阳图标 (亮色模式显示) */
+.theme-switch .icon-sun {
+  position: absolute;
+  opacity: 0;
+  transform: rotate(180deg) scale(0.5);
+}
+
+/* 月亮图标 (暗色模式显示) */
+.theme-switch .icon-moon {
+  position: absolute;
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
+/* 亮色模式下的图标状态 */
+[data-theme="light"] .theme-switch .icon-sun {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
+[data-theme="light"] .theme-switch .icon-moon {
+  opacity: 0;
+  transform: rotate(-180deg) scale(0.5);
+}
+
+/* 导航栏右侧按钮组 */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 /* ============================================
@@ -1582,4 +1699,339 @@ img {
   .highlights-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ============================================
+   品牌首页特有样式
+   ============================================ */
+
+/* Hero - 品牌版 */
+.hero-brand {
+  padding: 100px 0 80px;
+}
+
+.hero-brand .hero-title {
+  font-size: 52px;
+  line-height: 1.2;
+}
+
+/* 产品矩阵 */
+.products-section {
+  padding: 80px 0;
+}
+
+.product-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.product-card {
+  display: block;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 28px 32px;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+.product-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--primary-gradient);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.product-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.product-card:hover::before {
+  opacity: 1;
+}
+
+.product-card.featured {
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.product-card.featured::before {
+  opacity: 1;
+}
+
+.product-card.coming-soon {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.product-card.coming-soon:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--border-color);
+}
+
+.product-card-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.product-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.product-icon-alight {
+  background: linear-gradient(135deg, #2563eb 0%, #0891b2 100%);
+}
+
+.product-icon-placeholder {
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-color);
+}
+
+.product-info {
+  flex: 1;
+}
+
+.product-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.product-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.product-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--primary-bg);
+  color: var(--primary);
+  letter-spacing: 0.5px;
+}
+
+.product-badge.badge-soon {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.product-tagline {
+  font-size: 14px;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.product-desc {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.product-features-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.product-features-list .feature-tag {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.product-features-list .feature-tag.disabled {
+  opacity: 0.4;
+}
+
+.product-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+}
+
+.product-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.product-arrow {
+  font-size: 20px;
+  color: var(--primary);
+  font-weight: bold;
+  transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-arrow {
+  transform: translateX(4px);
+}
+
+.product-arrow.muted {
+  color: var(--text-hint);
+}
+
+/* CTA 区域 */
+.cta-section {
+  padding: 60px 0 100px;
+}
+
+.cta-card {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(8, 145, 178, 0.15) 100%);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  border-radius: 20px;
+  padding: 60px 40px;
+  text-align: center;
+}
+
+.cta-card h2 {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.cta-card > p {
+  font-size: 17px;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+}
+
+.cta-note {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--text-tertiary);
+}
+
+.cta-note a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.cta-note a:hover {
+  text-decoration: underline;
+}
+
+/* 架构区域 - 品牌版 */
+.architecture-brand {
+  padding: 80px 0;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .product-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .product-card {
+    padding: 24px;
+  }
+  
+  .cta-card {
+    padding: 40px 24px;
+  }
+  
+  .cta-card h2 {
+    font-size: 26px;
+  }
+  
+  .hero-brand .hero-title {
+    font-size: 38px;
+  }
+  
+  .product-name-row {
+    flex-wrap: wrap;
+  }
+  
+  .nav-actions {
+    gap: 6px;
+  }
+  
+  .theme-switch {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* ============================================
+   亮色模式特殊样式
+   ============================================ */
+[data-theme="light"] .navbar {
+  background: rgba(248, 250, 252, 0.85);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="light"] .navbar.scrolled {
+  background: rgba(248, 250, 252, 0.95);
+}
+
+[data-theme="light"] .hero::before {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+}
+
+[data-theme="light"] .hero::after {
+  background: radial-gradient(circle, rgba(8, 145, 178, 0.06) 0%, transparent 70%);
+}
+
+[data-theme="light"] .mac-window {
+  box-shadow:
+    0 25px 80px rgba(0, 0, 0, 0.15),
+    0 0 40px rgba(59, 130, 246, 0.08);
+}
+
+[data-theme="light"] .mac-window-header {
+  background: #f1f5f9;
+}
+
+[data-theme="light"] .mock-mac-bar {
+  background: #f1f5f9;
+}
+
+[data-theme="light"] .product-card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .cta-card {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(8, 145, 178, 0.08) 100%);
+}
+
+[data-theme="light"] .download-card::before {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, transparent 70%);
 }

@@ -1,6 +1,56 @@
 /* ============================================
-   LiteApps - 官网交互脚本（支持中英双语）
+   LiteApps - 官网交互脚本（支持中英双语 + 亮暗主题）
    ============================================ */
+
+// ========== 主题管理 ==========
+const THEME_KEY = 'liteapps-theme';
+
+// 获取系统主题偏好
+function getSystemTheme() {
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+    return 'light';
+  }
+  return 'dark';
+}
+
+// 检测并设置主题
+function detectTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved && (saved === 'light' || saved === 'dark')) return saved;
+  return getSystemTheme();
+}
+
+// 应用主题
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem(THEME_KEY, theme);
+  updateThemeSwitchButton(theme);
+}
+
+// 切换主题
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+}
+
+// 更新主题切换按钮状态
+function updateThemeSwitchButton(theme) {
+  const btn = document.getElementById('themeSwitch');
+  if (btn) {
+    btn.title = theme === 'dark' ? '切换到亮色模式' : 'Switch to Dark Mode';
+  }
+}
+
+// 监听系统主题变化
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    // 只有在用户没有手动设置过主题时才跟随系统
+    if (!localStorage.getItem(THEME_KEY)) {
+      applyTheme(e.matches ? 'dark' : 'light');
+    }
+  });
+}
 
 // ========== 多语言配置 ==========
 const i18n = {
@@ -811,6 +861,10 @@ function setDefaultVersion() {
 
 // 页面初始化
 document.addEventListener('DOMContentLoaded', () => {
+  // 检测并设置主题（需要在语言之前，避免闪烁）
+  const theme = detectTheme();
+  applyTheme(theme);
+  
   // 检测并设置语言
   currentLang = detectLanguage();
   applyLanguage();
@@ -820,6 +874,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const langSwitch = document.getElementById('langSwitch');
   if (langSwitch) {
     langSwitch.addEventListener('click', toggleLanguage);
+  }
+  
+  // 绑定主题切换按钮
+  const themeSwitch = document.getElementById('themeSwitch');
+  if (themeSwitch) {
+    themeSwitch.addEventListener('click', toggleTheme);
   }
   
   // 只在产品页面获取版本信息（品牌首页不需要）
