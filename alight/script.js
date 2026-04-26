@@ -174,7 +174,7 @@ const i18n = {
     info_size: '大小',
     info_require: '要求',
     info_arch: '架构',
-    info_size_val: '~10 MB',
+    info_size_val: '获取中...',
     info_require_val: 'macOS 12.0+',
     info_arch_val: 'Universal (Apple Silicon + Intel)',
     btn_download_dmg: '下载 .dmg 文件',
@@ -438,7 +438,7 @@ const i18n = {
     info_size: 'Size',
     info_require: 'Requirement',
     info_arch: 'Architecture',
-    info_size_val: '~10 MB',
+    info_size_val: 'Loading...',
     info_require_val: 'macOS 12.0+',
     info_arch_val: 'Universal (Apple Silicon + Intel)',
     btn_download_dmg: 'Download .dmg',
@@ -691,11 +691,90 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 
 // ========== 配置区（根据实际情况修改）==========
 const GITHUB_REPO = 'jackie-jiang-ios/alight';        // GitHub 仓库
-const OSS_BASE_URL = 'https://alight-downloads.oss-cn-hangzhou.aliyuncs.com/releases/';  // 阿里云 OSS 基础地址
 const GITHUB_RELEASE_BASE = 'https://github.com/jackie-jiang-ios/alight/releases/download/';  // GitHub Releases 下载地址
 
-// 全局状态：最新版本信息
+// 全局状态：最新版本信息（从 app-info.json 读取）
 let latestRelease = null;
+
+/**
+ * 从本地 app-info.json 加载版本信息
+ * 该文件在 CI 发布时自动生成，无需请求 GitHub API
+ */
+async function loadAppInfo() {
+  try {
+    const response = await fetch('./app-info.json');
+    if (!response.ok) {
+      console.warn('⚠️ app-info.json 未找到，使用默认值');
+      setDefaultVersion();
+      return;
+    }
+    
+    const info = await response.json();
+    console.log('✅ 已从 app-info.json 加载版本信息:', info);
+    
+    latestRelease = {
+      version: info.version || '1.0.0',
+      tag: `v${info.version}`,
+      name: `Alight Pro ${info.version}`,
+      body: '',
+      date: info.buildDate || '',
+      size: info.fileSizeBytes || 0,
+      sizeFormatted: info.fileSizeFormatted || '~10 MB',
+      ossUrl: info.downloadUrl || '',
+      githubUrl: info.githubUrl || '',
+      notarized: info.notarized || false,
+      fileName: info.fileName || ''
+    };
+    
+    // 更新页面显示
+    document.getElementById('version').innerHTML = `v${info.version}`;
+    
+    const dateEl = document.getElementById('releaseDate');
+    if (dateEl && info.buildDate) {
+      dateEl.textContent = info.buildDate;
+    }
+    
+    const sizeEl = document.getElementById('fileSize');
+    if (sizeEl) {
+      sizeEl.textContent = info.fileSizeFormatted || '~10 MB';
+    }
+    
+    // 更新公证状态标识
+    updateNotarizeBadge(info.notarized);
+    
+    const downloadBtn = document.getElementById('downloadBtn');
+    if (downloadBtn) {
+      downloadBtn.dataset.version = info.version;
+    }
+    
+    console.log(`📦 版本: v${info.version} | 大小: ${info.fileSizeFormatted} | 公证: ${info.notarized ? '✅' : '❌'} | 下载: ${info.downloadUrl}`);
+    
+  } catch (e) {
+    console.warn('加载 app-info.json 失败:', e);
+    setDefaultVersion();
+  }
+}
+
+/**
+ * 更新页面上公证状态标识
+ */
+function updateNotarizeBadge(notarized) {
+  // 更新下载区域的公证提示
+  const downloadNote = document.querySelector('.download-note');
+  if (downloadNote) {
+    if (notarized) {
+      downloadNote.innerHTML = '✅🔒 Apple 公证通过 · 双击即可安装运行 · 下载即表示同意我们的 <a href="terms.html" data-i18n="download_note_terms">服务条款</a> <span data-i18n="download_note_and">和</span> <a href="privacy.html" data-i18n="download_note_privacy">隐私政策</a>';
+    } else {
+      downloadNote.innerHTML = '⚠️ 首次运行需要在「系统设置 → 隐私与安全性」中允许运行 · 下载即表示同意我们的 <a href="terms.html" data-i18n="download_note_terms">服务条款</a> <span data-i18n="download_note_and">和</span> <a href="privacy.html" data-i18n="download_note_privacy">隐私政策</a>';
+    }
+  }
+
+  // 更新品牌首页的包大小区域（如果有）
+  const alightSizeEl = document.getElementById('alightSize');
+  if (alightSizeEl && latestRelease) {
+    alightSizeEl.textContent = latestRelease.sizeFormatted;
+  }
+}
 
 /**
  * 智能下载分流：
@@ -715,12 +794,12 @@ function isChinaUser() {
       return true;
     }
   } catch (e) {
-    // 出错时默认走 GitHub（更可靠）
+    // 出错时默认走 OSS（国内用户为主）
   }
-  return false;
+  return true;  // 默认走阿里云 OSS
 }
 
-// Download handler - 智能分流下载
+// Download handler - 使用 app-info.json 中的下载地址
 function handleDownload(event) {
   event.preventDefault();
   
@@ -732,18 +811,21 @@ function handleDownload(event) {
     return;
   }
   
-  const version = latestRelease.version;  // e.g. "1.0.11"
-  const dmfileName = `Alight-Pro-${version}.dmg`;
+  // 直接使用 app-info.json 中的下载地址（CI 发布时已写入正确的 URL）
+  let downloadUrl = latestRelease.ossUrl;
   
-  // 智能选择下载源
-  let downloadUrl;
-  if (isChinaUser()) {
-    downloadUrl = `${OSS_BASE_URL}${dmfileName}`;
-    console.log(`🇨🇳 China user detected, using Aliyun OSS`);
-  } else {
-    downloadUrl = `${GITHUB_RELEASE_BASE}v${version}/${dmfileName}`;
-    console.log(`🌍 International user detected, using GitHub Releases`);
+  if (!downloadUrl) {
+    // 降级：拼接 URL
+    const version = latestRelease.version;
+    const dmfileName = latestRelease.fileName || `Alight-Pro-${version}.dmg`;
+    if (isChinaUser()) {
+      downloadUrl = `https://alight-downloads.oss-cn-hangzhou.aliyuncs.com/${latestRelease.environment === 'production' ? 'releases' : latestRelease.environment}/${dmfileName}`;
+    } else {
+      downloadUrl = `${GITHUB_RELEASE_BASE}${latestRelease.releaseTag || 'production-release'}/${dmfileName}`;
+    }
   }
+  
+  console.log(`📥 下载链接: ${downloadUrl}`);
   
   // 按钮状态反馈
   const originalHTML = btn.innerHTML;
@@ -789,64 +871,41 @@ document.querySelectorAll('.feature-card, .highlight-item, .screenshot-card').fo
   observer.observe(el);
 });
 
-// Version info - 从 GitHub API 动态获取最新 Release 信息
-async function fetchLatestVersion() {
-  try {
-    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
-    
-    if (!response.ok) {
-      console.warn(`GitHub API returned ${response.status}, using default version`);
-      setDefaultVersion();
-      return;
-    }
-    
-    const data = await response.json();
-    
-    if (data && data.tag_name) {
-      const version = data.tag_name.replace(/^v/, '');
-      const locale = currentLang === 'zh' ? 'zh-CN' : 'en-US';
-      const publishDate = data.published_at ? new Date(data.published_at).toLocaleDateString(locale) : (currentLang === 'zh' ? '未知' : 'Unknown');
-      
-      latestRelease = {
-        version: version,
-        tag: data.tag_name,
-        name: data.name || `Alight Pro ${version}`,
-        body: data.body || '',
-        date: publishDate,
-        ossUrl: `${OSS_BASE_URL}Alight-Pro-${version}.dmg`,
-        githubUrl: data.html_url || ''
-      };
-      
-      document.getElementById('version').innerHTML = data.tag_name;
-      
-      const dateEl = document.getElementById('releaseDate');
-      if (dateEl) {
-        dateEl.textContent = publishDate;
-      }
-      
-      const downloadBtn = document.getElementById('downloadBtn');
-      if (downloadBtn) {
-        downloadBtn.dataset.version = version;
-      }
-      
-      console.log(`✅ Latest version: ${data.tag_name} (${publishDate})`);
-      console.log(`📥 OSS URL: ${latestRelease.ossUrl}`);
-    } else {
-      setDefaultVersion();
-    }
-  } catch (e) {
-    console.warn('Failed to fetch version:', e);
-    setDefaultVersion();
+/**
+ * 格式化文件大小（使用 1000 进制，与 macOS Finder 一致）
+ * @param {number} bytes - 字节数
+ * @returns {string} 格式化后的大小字符串
+ */
+function formatFileSize(bytes) {
+  if (!bytes || bytes === 0) return '0 MB';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const k = 1000; // 使用 1000 进制
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const size = bytes / Math.pow(k, i);
+  
+  // 对于 MB 级别，显示一位小数
+  if (i === 2) {
+    return `${size.toFixed(1)} MB`;
   }
+  return `${size.toFixed(1)} ${units[i]}`;
 }
 
-// 设置默认版本（API 失败时的降级方案）
+// Version info - 从本地 app-info.json 读取（CI 发布时自动生成）
+async function fetchLatestVersion() {
+  // 直接使用 loadAppInfo，不再请求 GitHub API
+  await loadAppInfo();
+}
+
+// 设置默认版本（app-info.json 不存在时的降级方案）
 function setDefaultVersion() {
-  const t = i18n[currentLang];
   document.getElementById('version').innerHTML = 'v1.0.11';
   const dateEl = document.getElementById('releaseDate');
   if (dateEl) {
     dateEl.textContent = currentLang === 'zh' ? '2026-04-26' : 'Apr 26, 2026';
+  }
+  const sizeEl = document.getElementById('fileSize');
+  if (sizeEl) {
+    sizeEl.textContent = '~2.2 MB';
   }
   latestRelease = {
     version: '1.0.11',
@@ -854,8 +913,12 @@ function setDefaultVersion() {
     name: 'Alight Pro 1.0.11',
     body: '',
     date: currentLang === 'zh' ? '2026-04-26' : 'Apr 26, 2026',
-    ossUrl: `${OSS_BASE_URL}Alight-Pro-1.0.11.dmg`,
-    githubUrl: ''
+    size: 2200000,
+    sizeFormatted: '~2.2 MB',
+    ossUrl: '',
+    githubUrl: '',
+    notarized: false,
+    fileName: ''
   };
 }
 
@@ -882,9 +945,12 @@ document.addEventListener('DOMContentLoaded', () => {
     themeSwitch.addEventListener('click', toggleTheme);
   }
   
-  // 只在产品页面获取版本信息（品牌首页不需要）
+  // 加载版本信息（从 app-info.json，零 API 请求）
   if (document.getElementById('version')) {
     fetchLatestVersion();
+  } else if (document.getElementById('alightSize')) {
+    // 品牌首页也加载 app-info.json（用于更新包大小）
+    loadAppInfo();
   }
 });
 
