@@ -789,6 +789,25 @@ document.querySelectorAll('.feature-card, .highlight-item, .screenshot-card').fo
   observer.observe(el);
 });
 
+/**
+ * 格式化文件大小（使用 1000 进制，与 macOS Finder 一致）
+ * @param {number} bytes - 字节数
+ * @returns {string} 格式化后的大小字符串
+ */
+function formatFileSize(bytes) {
+  if (!bytes || bytes === 0) return '0 MB';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const k = 1000; // 使用 1000 进制
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const size = bytes / Math.pow(k, i);
+  
+  // 对于 MB 级别，显示一位小数
+  if (i === 2) {
+    return `${size.toFixed(1)} MB`;
+  }
+  return `${size.toFixed(1)} ${units[i]}`;
+}
+
 // Version info - 从 GitHub API 动态获取最新 Release 信息
 async function fetchLatestVersion() {
   try {
@@ -807,12 +826,28 @@ async function fetchLatestVersion() {
       const locale = currentLang === 'zh' ? 'zh-CN' : 'en-US';
       const publishDate = data.published_at ? new Date(data.published_at).toLocaleDateString(locale) : (currentLang === 'zh' ? '未知' : 'Unknown');
       
+      // 从 assets 中找到 dmg 文件的大小
+      let dmgSize = null;
+      let dmgSizeFormatted = '~10 MB'; // 默认值
+      if (data.assets && data.assets.length > 0) {
+        const dmgAsset = data.assets.find(asset => 
+          asset.name && asset.name.toLowerCase().endsWith('.dmg')
+        );
+        if (dmgAsset && dmgAsset.size) {
+          dmgSize = dmgAsset.size;
+          dmgSizeFormatted = formatFileSize(dmgSize);
+          console.log(`📦 DMG file size: ${dmgSize} bytes (${dmgSizeFormatted})`);
+        }
+      }
+      
       latestRelease = {
         version: version,
         tag: data.tag_name,
         name: data.name || `Alight Pro ${version}`,
         body: data.body || '',
         date: publishDate,
+        size: dmgSize,
+        sizeFormatted: dmgSizeFormatted,
         ossUrl: `${OSS_BASE_URL}Alight-Pro-${version}.dmg`,
         githubUrl: data.html_url || ''
       };
@@ -822,6 +857,18 @@ async function fetchLatestVersion() {
       const dateEl = document.getElementById('releaseDate');
       if (dateEl) {
         dateEl.textContent = publishDate;
+      }
+      
+      // 更新文件大小显示（产品页）
+      const sizeEl = document.getElementById('fileSize');
+      if (sizeEl) {
+        sizeEl.textContent = dmgSizeFormatted;
+      }
+      
+      // 更新品牌首页的产品卡片大小
+      const alightSizeEl = document.getElementById('alightSize');
+      if (alightSizeEl) {
+        alightSizeEl.textContent = dmgSizeFormatted;
       }
       
       const downloadBtn = document.getElementById('downloadBtn');
@@ -842,11 +889,20 @@ async function fetchLatestVersion() {
 
 // 设置默认版本（API 失败时的降级方案）
 function setDefaultVersion() {
-  const t = i18n[currentLang];
   document.getElementById('version').innerHTML = 'v1.0.11';
   const dateEl = document.getElementById('releaseDate');
   if (dateEl) {
     dateEl.textContent = currentLang === 'zh' ? '2026-04-26' : 'Apr 26, 2026';
+  }
+  // 设置默认大小
+  const sizeEl = document.getElementById('fileSize');
+  if (sizeEl) {
+    sizeEl.textContent = '~2.2 MB';
+  }
+  // 品牌首页的产品卡片大小
+  const alightSizeEl = document.getElementById('alightSize');
+  if (alightSizeEl) {
+    alightSizeEl.textContent = '~2.2 MB';
   }
   latestRelease = {
     version: '1.0.11',
@@ -854,6 +910,8 @@ function setDefaultVersion() {
     name: 'Alight Pro 1.0.11',
     body: '',
     date: currentLang === 'zh' ? '2026-04-26' : 'Apr 26, 2026',
+    size: 2200000, // 约 2.2 MB
+    sizeFormatted: '~2.2 MB',
     ossUrl: `${OSS_BASE_URL}Alight-Pro-1.0.11.dmg`,
     githubUrl: ''
   };
@@ -882,8 +940,8 @@ document.addEventListener('DOMContentLoaded', () => {
     themeSwitch.addEventListener('click', toggleTheme);
   }
   
-  // 只在产品页面获取版本信息（品牌首页不需要）
-  if (document.getElementById('version')) {
+  // 只在有版本信息或大小显示元素时获取版本信息
+  if (document.getElementById('version') || document.getElementById('alightSize')) {
     fetchLatestVersion();
   }
 });
