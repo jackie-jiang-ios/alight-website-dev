@@ -689,11 +689,8 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   });
 });
 
-// ========== 配置区（根据实际情况修改）==========
-const GITHUB_REPO = 'jackie-jiang-ios/alight';        // GitHub 仓库
-const GITHUB_RELEASE_BASE = 'https://github.com/jackie-jiang-ios/alight/releases/download/';  // GitHub Releases 下载地址
-
-// 全局状态：最新版本信息（从 app-info.json 读取）
+// ========== 版本信息（从 app-info.json 读取，CI 发布时自动生成）==========
+// 全局状态：最新版本信息
 let latestRelease = null;
 
 /**
@@ -777,62 +774,27 @@ function updateNotarizeBadge(notarized) {
 }
 
 /**
- * 智能下载分流：
- * - 国内用户 → 阿里云 OSS（速度快）
- * - 国外用户 → GitHub Releases（全球 CDN）
+ * 下载处理 - 直接使用 app-info.json 中的下载地址
  */
-function isChinaUser() {
-  try {
-    const lang = (navigator.language || navigator.userLanguage || '').toLowerCase();
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-    
-    if (lang.startsWith('zh') && (tz.includes('Asia/Shanghai') || tz.includes('Asia/Hong_Kong') || tz.includes('Asia/Taipei'))) {
-      return true;
-    }
-    
-    if (lang.startsWith('zh')) {
-      return true;
-    }
-  } catch (e) {
-    // 出错时默认走 OSS（国内用户为主）
-  }
-  return true;  // 默认走阿里云 OSS
-}
-
-// Download handler - 使用 app-info.json 中的下载地址
 function handleDownload(event) {
   event.preventDefault();
   
   const t = i18n[currentLang];
   const btn = document.getElementById('downloadBtn');
   
-  if (!latestRelease || !latestRelease.version) {
+  if (!latestRelease || !latestRelease.ossUrl) {
     alert(t.version_fetch_error);
     return;
   }
   
-  // 直接使用 app-info.json 中的下载地址（CI 发布时已写入正确的 URL）
-  let downloadUrl = latestRelease.ossUrl;
-  
-  if (!downloadUrl) {
-    // 降级：拼接 URL
-    const version = latestRelease.version;
-    const dmfileName = latestRelease.fileName || `Alight-Pro-${version}.dmg`;
-    if (isChinaUser()) {
-      downloadUrl = `https://alight-downloads.oss-cn-hangzhou.aliyuncs.com/${latestRelease.environment === 'production' ? 'releases' : latestRelease.environment}/${dmfileName}`;
-    } else {
-      downloadUrl = `${GITHUB_RELEASE_BASE}${latestRelease.releaseTag || 'production-release'}/${dmfileName}`;
-    }
-  }
-  
-  console.log(`📥 下载链接: ${downloadUrl}`);
+  console.log(`📥 下载链接: ${latestRelease.ossUrl}`);
   
   // 按钮状态反馈
   const originalHTML = btn.innerHTML;
   btn.innerHTML = `
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="10"/>
-      <polyline points="12 6 12 12 16 14"/>
+      <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
     </svg>
     ${t.btn_redirecting}
   `;
@@ -840,7 +802,7 @@ function handleDownload(event) {
   btn.classList.add('redirecting');
   
   setTimeout(() => {
-    window.location.href = downloadUrl;
+    window.location.href = latestRelease.ossUrl;
     setTimeout(() => {
       btn.innerHTML = originalHTML;
       btn.style.pointerEvents = '';
@@ -871,28 +833,8 @@ document.querySelectorAll('.feature-card, .highlight-item, .screenshot-card').fo
   observer.observe(el);
 });
 
-/**
- * 格式化文件大小（使用 1000 进制，与 macOS Finder 一致）
- * @param {number} bytes - 字节数
- * @returns {string} 格式化后的大小字符串
- */
-function formatFileSize(bytes) {
-  if (!bytes || bytes === 0) return '0 MB';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  const k = 1000; // 使用 1000 进制
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  const size = bytes / Math.pow(k, i);
-  
-  // 对于 MB 级别，显示一位小数
-  if (i === 2) {
-    return `${size.toFixed(1)} MB`;
-  }
-  return `${size.toFixed(1)} ${units[i]}`;
-}
-
 // Version info - 从本地 app-info.json 读取（CI 发布时自动生成）
 async function fetchLatestVersion() {
-  // 直接使用 loadAppInfo，不再请求 GitHub API
   await loadAppInfo();
 }
 
