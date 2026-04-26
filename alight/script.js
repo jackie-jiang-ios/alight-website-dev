@@ -694,6 +694,30 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 let latestRelease = null;
 
 /**
+ * 检测用户是否在中国大陆（用于下载分流）
+ * 通过 navigator.language / timezone / Intl API 综合判断
+ */
+function isChinaUser() {
+  try {
+    // 1. 语言检测
+    const lang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+    if (lang.startsWith('zh')) return true;
+
+    // 2. 时区检测（中国标准时间 UTC+8）
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz === 'Asia/Shanghai' || tz === 'Asia/Hong_Kong' || tz === 'Asia/Taipei') return true;
+
+    // 3. 时区偏移检测（简单兜底）
+    const offset = new Date().getTimezoneOffset();
+    // UTC+8 的 offset 是 -480 分钟
+    if (offset === -480) return true;
+  } catch (e) {
+    console.warn('⚠️ 地区检测失败:', e);
+  }
+  return false;
+}
+
+/**
  * 从本地 app-info.json 加载版本信息
  * 该文件在 CI 发布时自动生成，无需请求 GitHub API
  */
@@ -718,6 +742,7 @@ async function loadAppInfo() {
       size: info.fileSizeBytes || 0,
       sizeFormatted: info.fileSizeFormatted || '~10 MB',
       ossUrl: info.downloadUrl || '',
+      githubDownloadUrl: info.githubDownloadUrl || '',
       githubUrl: info.githubUrl || '',
       notarized: info.notarized || false,
       fileName: info.fileName || ''
@@ -774,7 +799,7 @@ function updateNotarizeBadge(notarized) {
 }
 
 /**
- * 下载处理 - 直接使用 app-info.json 中的下载地址
+ * 下载处理 - 国内走 OSS/GitHub，国外走 GitHub Release（智能分流）
  */
 function handleDownload(event) {
   event.preventDefault();
@@ -787,7 +812,21 @@ function handleDownload(event) {
     return;
   }
   
-  console.log(`📥 下载链接: ${latestRelease.ossUrl}`);
+  // 智能选择下载源：国内用户走 downloadUrl（OSS 或 GitHub），国外用户走 githubDownloadUrl
+  let downloadUrl;
+  if (isChinaUser()) {
+    downloadUrl = latestRelease.ossUrl;
+    console.log(`🇨🇳 China user detected, using: ${downloadUrl}`);
+  } else if (latestRelease.githubDownloadUrl) {
+    downloadUrl = latestRelease.githubDownloadUrl;
+    console.log(`🌍 International user detected, using GitHub: ${downloadUrl}`);
+  } else {
+    // 降级：如果没有 githubDownloadUrl，统一走 downloadUrl
+    downloadUrl = latestRelease.ossUrl;
+    console.log(`⚠️ No githubDownloadUrl, fallback to: ${downloadUrl}`);
+  }
+  
+  console.log(`📥 下载链接: ${downloadUrl}`);
   
   // 按钮状态反馈
   const originalHTML = btn.innerHTML;
@@ -802,7 +841,7 @@ function handleDownload(event) {
   btn.classList.add('redirecting');
   
   setTimeout(() => {
-    window.location.href = latestRelease.ossUrl;
+    window.location.href = downloadUrl;
     setTimeout(() => {
       btn.innerHTML = originalHTML;
       btn.style.pointerEvents = '';
@@ -858,6 +897,7 @@ function setDefaultVersion() {
     size: 2200000,
     sizeFormatted: '~2.2 MB',
     ossUrl: '',
+    githubDownloadUrl: '',
     githubUrl: '',
     notarized: false,
     fileName: ''
