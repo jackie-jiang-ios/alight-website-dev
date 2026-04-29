@@ -1,14 +1,13 @@
 {
-  "version": "0.1.0",
-  "buildDate": "2026-04-26",
-  "fileName": "Alight-dev-0.1.0+20260426.1236.dmg",
-  "fileSizeBytes": 2381001,
-  "fileSizeFormatted": "2.2 MB",
-  "downloadUrl": "https://github.com/jackie-jiang-ios/alight-website-dev/releases/download/dev-release/Alight-dev-0.1.0+20260426.1236.dmg",
-  "githubDownloadUrl": "https://github.com/jackie-jiang-ios/alight-website-dev/releases/download/dev-release/Alight-dev-0.1.0+20260426.1236.dmg",
-  "githubUrl": "https://github.com/jackie-jiang-ios/alight/releases/tag/dev-release",
-  "notarize": false,
-  "environment": "dev",
-  "sha": "482e935e9d214cdffaa24fa710e983e69d2e04eb",
-  "updatedAt": "2026-04-26T12:38:48Z"
+  "version": "0.1.1",
+  "buildDate": "2026-04-28",
+  "fileName": "Alight-pro-0.1.1+20260428.0258.dmg",
+  "fileSizeBytes": 2915613,
+  "fileSizeFormatted": "2.8 MB",
+  "downloadUrl": "https://alight-downloads.oss-cn-hangzhou.aliyuncs.com/releases/Alight-pro-0.1.1%2B20260428.0258.dmg",
+  "githubDownloadUrl": "https://github.com/jackie-jiang-ios/alight-website/releases/download/production-release/Alight-pro-0.1.1%2B20260428.0258.dmg",
+  "notarize": true,
+  "environment": "production",
+  "sha": "local-build",
+  "updatedAt": "2026-04-28T02:58:00Z"
 }
